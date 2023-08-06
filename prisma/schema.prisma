@@ -10,6 +10,7 @@ datasource db {
 }
 
 model User {
+  @@map("user")
   id         String   @id @default(cuid())
   name       String
   email      String
@@ -17,4 +18,9 @@ model User {
   is_admin   Boolean
   created_at DateTime @db.Timestamptz() @default(now())
   updated_at DateTime @db.Timestamptz() @updatedAt
+}
+
+model TokenBlocklist {
+  @@map("token_blocklist")
+  expired_token String  @id
 }
