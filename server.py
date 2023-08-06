@@ -21,7 +21,39 @@ async def register_async(name, email, password):
     return new_user.id
 
 
+async def check_if_existing_user_async(email):
+    await db.connect()
+    existing_user = await db.user.find_first(where={"email": email})
+    await db.disconnect()
+    if existing_user:
+        return True
+    else:
+        return False
+
+
 bp = Blueprint("api", __name__, url_prefix="/api")
+
+
+@bp.route("/check-if-existing-user", methods=["POST"])
+@cross_origin()
+def check_if_existing_user():
+    try:
+        user_exists = loop.run_until_complete(
+            check_if_existing_user_async(request.json["email"])
+        )
+        if user_exists:
+            return Response(
+                "An account for this email address already exists. Please log in.",
+                status=400,
+            )
+        else:
+            return "OK"
+    except Exception as e:
+        print(e)
+        return Response(
+            "Sorry, there was a problem signing you up. Please try again later.",
+            status=400,
+        )
 
 
 @bp.route("/register", methods=["POST"])
