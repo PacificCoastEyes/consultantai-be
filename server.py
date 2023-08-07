@@ -1,12 +1,12 @@
-import os, datetime
 import asyncio
 from operator import itemgetter
 from flask import Flask, request, Response, Blueprint
 from flask_cors import CORS, cross_origin
 from prisma import Prisma
-from dotenv import load_dotenv, find_dotenv
-import bcrypt
-import jwt
+
+from utils.login_async import login_async
+from utils.register_async import register_async
+from utils.check_if_existing_user_async import check_if_existing_user_async
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -14,75 +14,6 @@ cors = CORS(app)
 loop = asyncio.get_event_loop()
 
 db = Prisma()
-
-load_dotenv(find_dotenv())
-
-
-def sign_token(user):
-    return jwt.encode(
-        {
-            "id": user.id,
-            "name": user.name,
-            "isAdmin": user.is_admin,
-            "iat": datetime.datetime.now(),
-            "exp": datetime.datetime.now() + datetime.timedelta(days=7),
-        },
-        os.environ.get("TOKEN_SECRET"),
-    )
-
-
-async def login_async(email, password):
-    await db.connect()
-    user = await db.user.find_first(where={"email": email})
-    await db.disconnect()
-    if user:
-        passwords_match = bcrypt.checkpw(
-            password.encode("utf-8"), user.password.encode("utf-8")
-        )
-        if passwords_match:
-            auth_token = sign_token(user)
-            return {
-                "authToken": auth_token,
-                "firstName": user.name.split(" ")[0],
-                "isAdmin": user.is_admin,
-            }
-        else:
-            return None
-    else:
-        return None
-
-
-async def register_async(name, email, password):
-    await db.connect()
-    encrypted_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-    new_user = await db.user.create(
-        {
-            "name": name,
-            "email": email,
-            "password": encrypted_password.decode("utf-8"),
-            "is_admin": False,
-        }
-    )
-    await db.disconnect()
-    if new_user:
-        auth_token = sign_token(new_user)
-        return {
-            "authToken": auth_token,
-            "firstName": new_user.name.split(" ")[0],
-            "isAdmin": new_user.is_admin,
-        }
-    else:
-        return None
-
-
-async def check_if_existing_user_async(email):
-    await db.connect()
-    existing_user = await db.user.find_first(where={"email": email})
-    await db.disconnect()
-    if existing_user:
-        return True
-    else:
-        return False
 
 
 bp = Blueprint("api", __name__, url_prefix="/api")
@@ -93,7 +24,7 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 def check_if_existing_user():
     try:
         user_exists = loop.run_until_complete(
-            check_if_existing_user_async(request.json["email"])
+            check_if_existing_user_async(db, request.json["email"])
         )
         if user_exists:
             return Response(
@@ -115,7 +46,7 @@ def check_if_existing_user():
 def login():
     email, password = itemgetter("email", "password")(request.json)
     try:
-        login_payload = loop.run_until_complete(login_async(email, password))
+        login_payload = loop.run_until_complete(login_async(db, email, password))
         if login_payload:
             return login_payload
         else:
@@ -123,7 +54,7 @@ def login():
     except Exception as e:
         print(e)
         return Response(
-            "The email address and password you entered do not match",
+            "The email address and password you entered do not match.",
             status=400,
         )
 
@@ -133,7 +64,9 @@ def login():
 def register():
     name, email, password = itemgetter("name", "email", "password")(request.json)
     try:
-        signup_payload = loop.run_until_complete(register_async(name, email, password))
+        signup_payload = loop.run_until_complete(
+            register_async(db, name, email, password)
+        )
         if signup_payload:
             return signup_payload
         else:
