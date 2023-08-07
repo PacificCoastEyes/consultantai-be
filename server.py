@@ -7,6 +7,7 @@ from prisma import Prisma
 from utils.login_async import login_async
 from utils.register_async import register_async
 from utils.check_if_existing_user_async import check_if_existing_user_async
+from utils.blocklist_token_async import blocklist_token_async
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -37,7 +38,7 @@ def check_if_existing_user():
         print(e)
         return Response(
             "Sorry, there was a problem signing you up. Please try again later.",
-            status=400,
+            status=500,
         )
 
 
@@ -75,8 +76,24 @@ def register():
         print(e)
         return Response(
             "Sorry, there was a problem signing you up. Please try again later.",
-            status=400,
+            status=500,
         )
+
+
+@bp.route("/logout")
+@cross_origin()
+def logout():
+    auth_token = request.headers["Authorization"].split(" ")[1]
+    try:
+        token_blocklisted = loop.run_until_complete(
+            blocklist_token_async(db, auth_token)
+        )
+        if not token_blocklisted:
+            raise Exception("Error adding token to database.")
+    except Exception as e:
+        print(e)
+    finally:
+        return "OK"
 
 
 app.register_blueprint(bp)
