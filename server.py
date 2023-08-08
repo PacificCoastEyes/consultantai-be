@@ -16,8 +16,6 @@ cors = CORS(app)
 loop = asyncio.get_event_loop()
 
 db = Prisma()
-db.connect()
-
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
