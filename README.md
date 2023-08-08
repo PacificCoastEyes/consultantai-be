@@ -16,6 +16,8 @@ This backend app handles the storage and retrieval of user account data (includi
 
 The app is built in Python on the Flask web framework. Access to the PostgreSQL database is mediated with the Prisma for Python ORM. Authentication tokens are signed and decoded using PyJWT and passwords are hashed and verified using bcrypt.
 
+The app is hosted in a Linux-based Docker container in Microsoft Azure App Service and served using an Azure-provided Guicorn server for Flask applications.
+
 ### Endpoints
 
 -   /register - Creates a new user record in the database
