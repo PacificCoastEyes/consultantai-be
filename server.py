@@ -21,7 +21,6 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 @bp.route("/login", methods=["POST"])
-@cross_origin()
 def login():
     email, password = itemgetter("email", "password")(request.json)
     try:
@@ -39,7 +38,6 @@ def login():
 
 
 @bp.route("/register", methods=["POST"])
-@cross_origin()
 def register():
     name, email, password = itemgetter("name", "email", "password")(request.json)
     try:
@@ -59,7 +57,6 @@ def register():
 
 
 @bp.route("/check-if-existing-user", methods=["POST"])
-@cross_origin()
 def check_if_existing_user():
     try:
         user_exists = loop.run_until_complete(
@@ -81,7 +78,6 @@ def check_if_existing_user():
 
 
 @bp.route("/logout")
-@cross_origin()
 def logout():
     auth_token = request.headers["Authorization"].split(" ")[1]
     try:
@@ -97,7 +93,6 @@ def logout():
 
 
 @bp.route("validate-token")
-@cross_origin()
 def validate_token():
     auth_token = request.headers["Authorization"].split(" ")[1]
     try:
