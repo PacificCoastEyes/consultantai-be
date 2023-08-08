@@ -115,7 +115,7 @@ def validate_token():
 
 app.register_blueprint(bp)
 
-if __name__ == "__main__":
-    from waitress import serve
+# if __name__ == "__main__":
+#     from waitress import serve
 
-    serve(app, host="20.105.224.16", port=8000)
+#     serve(app, host="20.105.224.16", port=8080)
