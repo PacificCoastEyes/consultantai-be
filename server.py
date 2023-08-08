@@ -8,6 +8,7 @@ from utils.login_async import login_async
 from utils.register_async import register_async
 from utils.check_if_existing_user_async import check_if_existing_user_async
 from utils.blocklist_token_async import blocklist_token_async
+from utils.validate_token_async import validate_token_async
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -15,31 +16,10 @@ cors = CORS(app)
 loop = asyncio.get_event_loop()
 
 db = Prisma()
+db.connect()
 
 
 bp = Blueprint("api", __name__, url_prefix="/api")
-
-
-@bp.route("/check-if-existing-user", methods=["POST"])
-@cross_origin()
-def check_if_existing_user():
-    try:
-        user_exists = loop.run_until_complete(
-            check_if_existing_user_async(db, request.json["email"])
-        )
-        if user_exists:
-            return Response(
-                "An account for this email address already exists. Please log in.",
-                status=400,
-            )
-        else:
-            return "OK"
-    except Exception as e:
-        print(e)
-        return Response(
-            "Sorry, there was a problem signing you up. Please try again later.",
-            status=500,
-        )
 
 
 @bp.route("/login", methods=["POST"])
@@ -80,6 +60,28 @@ def register():
         )
 
 
+@bp.route("/check-if-existing-user", methods=["POST"])
+@cross_origin()
+def check_if_existing_user():
+    try:
+        user_exists = loop.run_until_complete(
+            check_if_existing_user_async(db, request.json["email"])
+        )
+        if user_exists:
+            return Response(
+                "An account for this email address already exists. Please log in.",
+                status=400,
+            )
+        else:
+            return "OK"
+    except Exception as e:
+        print(e)
+        return Response(
+            "Sorry, there was a problem signing you up. Please try again later.",
+            status=500,
+        )
+
+
 @bp.route("/logout")
 @cross_origin()
 def logout():
@@ -94,6 +96,23 @@ def logout():
         print(e)
     finally:
         return "OK"
+
+
+@bp.route("validate-token")
+@cross_origin()
+def validate_token():
+    auth_token = request.headers["Authorization"].split(" ")[1]
+    try:
+        validated_payload = loop.run_until_complete(
+            validate_token_async(db, auth_token)
+        )
+        if not validated_payload:
+            raise Exception("Auth token is invalid and/or expired")
+        print(validated_payload)
+        return {"valid": True, "user": validated_payload}
+    except Exception as e:
+        print(e)
+        return {"valid": False}, 400
 
 
 app.register_blueprint(bp)
